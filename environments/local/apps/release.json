@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "backend_enabled": false,
+  "worker_enabled": false,
+  "frontend_enabled": false,
+  "image": null,
+  "knowledge_snapshot_sha256": null
+}

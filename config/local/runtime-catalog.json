@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "backend": {
+    "source_status": "implemented_read_api_only",
+    "dockerfile": "backend/Dockerfile",
+    "context": ".",
+    "port": 8000,
+    "enabled_by_default": false
+  },
+  "worker": {
+    "source_status": "entrypoint_not_implemented",
+    "enabled_by_default": false
+  },
+  "frontend": {
+    "source_status": "build_interface_not_available_in_reviewed_checkout",
+    "enabled_by_default": false
+  },
+  "storage": {
+    "mode": "existing_public_http_sources",
+    "adapter": "CachedHttpSourceStorage"
+  },
+  "redis": {
+    "status": "optional_platform_only",
+    "does_not_implement_queue_or_worker": true
+  }
+}
