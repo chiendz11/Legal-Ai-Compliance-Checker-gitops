@@ -16,7 +16,8 @@ configMapGenerator:
   - UPLOAD_DIR=/cache/uploads
   - REPORT_EXPORT_DIR=/cache/report_exports
   - ASSESSMENT_MODULES=modules
-  - ASSESSMENT_LLM=offline
+  - ASSESSMENT_LLM=groq
+  - OPENAI_MODEL=openai/gpt-oss-20b
   - ASSESSMENT_QUEUE=inline
   - SOURCE_DOWNLOAD_TIMEOUT_SECONDS=30
   - SOURCE_MAX_BYTES=104857600
