@@ -2,7 +2,8 @@
   "schema_version": "1.0.0",
   "backend_enabled": true,
   "worker_enabled": false,
-  "frontend_enabled": false,
+  "frontend_enabled": true,
   "image": "ghcr.io/chiendz11/legal-ai-compliance-checker-backend:sha-4b56d75215eadf1234151fb6f75226791b891652",
-  "knowledge_snapshot_sha256": null
+  "knowledge_snapshot_sha256": null,
+  "frontend_image": "ghcr.io/chiendz11/legal-ai-compliance-checker-frontend:sha-4b56d75215eadf1234151fb6f75226791b891652"
 }
