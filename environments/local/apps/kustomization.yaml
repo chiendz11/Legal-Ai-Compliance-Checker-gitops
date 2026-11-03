@@ -1,9 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 images:
 - name: ghcr.io/chiendz11/legal-ai-compliance-checker-backend
-  newTag: sha-3f9c6de0c85054911f03bfabc13362d965c60af5
+  newTag: sha-5194fddf3e87cea90d1a7fb8913a98ec6a20bd9c
 - name: ghcr.io/chiendz11/legal-ai-compliance-checker-frontend
-  newTag: sha-3f9c6de0c85054911f03bfabc13362d965c60af5
+  newTag: sha-5194fddf3e87cea90d1a7fb8913a98ec6a20bd9c
 kind: Kustomization
 namespace: legal-checker
 resources:
