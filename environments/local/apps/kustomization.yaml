@@ -13,6 +13,11 @@ configMapGenerator:
 - name: legal-backend-config
   literals:
   - SOURCE_CACHE_DIR=/cache/source
+  - UPLOAD_DIR=/cache/uploads
+  - REPORT_EXPORT_DIR=/cache/report_exports
+  - ASSESSMENT_MODULES=modules
+  - ASSESSMENT_LLM=offline
+  - ASSESSMENT_QUEUE=inline
   - SOURCE_DOWNLOAD_TIMEOUT_SECONDS=30
   - SOURCE_MAX_BYTES=104857600
   - PYTHONDONTWRITEBYTECODE=1
