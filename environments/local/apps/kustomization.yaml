@@ -6,7 +6,7 @@ resources:
 images:
 - name: registry.invalid/legal-checker/backend
   newName: ghcr.io/chiendz11/legal-ai-compliance-checker-backend
-  newTag: sha-8ff61f8e7abdeaa8062b8c24a4b1d73deab2a873
+  newTag: sha-4b56d75215eadf1234151fb6f75226791b891652
 configMapGenerator:
 - name: legal-backend-config
   literals:
