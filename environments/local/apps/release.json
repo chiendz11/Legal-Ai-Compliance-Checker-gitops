@@ -3,6 +3,6 @@
   "backend_enabled": true,
   "worker_enabled": false,
   "frontend_enabled": false,
-  "image": "ghcr.io/chiendz11/legal-ai-compliance-checker-backend:sha-6e821ff9607a14bae48e35f2767f1e08dfaaa97c",
+  "image": "ghcr.io/chiendz11/legal-ai-compliance-checker-backend:sha-8ff61f8e7abdeaa8062b8c24a4b1d73deab2a873",
   "knowledge_snapshot_sha256": null
 }
