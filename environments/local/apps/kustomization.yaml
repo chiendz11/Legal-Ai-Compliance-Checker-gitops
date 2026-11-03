@@ -16,8 +16,9 @@ configMapGenerator:
   - UPLOAD_DIR=/cache/uploads
   - REPORT_EXPORT_DIR=/cache/report_exports
   - ASSESSMENT_MODULES=modules
-  - ASSESSMENT_LLM=groq
-  - OPENAI_MODEL=openai/gpt-oss-20b
+  - ASSESSMENT_LLM=openai
+  - OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+  - OPENAI_MODEL=gemini-3.5-flash-lite
   - ASSESSMENT_QUEUE=inline
   - SOURCE_DOWNLOAD_TIMEOUT_SECONDS=30
   - SOURCE_MAX_BYTES=104857600
