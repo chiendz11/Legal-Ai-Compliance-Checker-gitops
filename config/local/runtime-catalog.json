@@ -1,26 +1,29 @@
 {
   "schema_version": "1.0.0",
   "backend": {
-    "source_status": "implemented_read_api_only",
+    "source_status": "fastapi_full_assessment_api_implemented",
     "dockerfile": "backend/Dockerfile",
     "context": ".",
     "port": 8000,
-    "enabled_by_default": false
+    "enabled_by_default": true
   },
   "worker": {
-    "source_status": "entrypoint_not_implemented",
-    "enabled_by_default": false
+    "source_status": "celery_entrypoint_implemented",
+    "same_image_as": "backend",
+    "scheduler": "separate_single_replica",
+    "enabled_by_default": true
   },
   "frontend": {
-    "source_status": "build_interface_not_available_in_reviewed_checkout",
-    "enabled_by_default": false
+    "source_status": "react_vite_dockerfile_implemented",
+    "enabled_by_default": true
   },
   "storage": {
-    "mode": "existing_public_http_sources",
-    "adapter": "CachedHttpSourceStorage"
+    "mode": "http_sources_and_shared_upload_pvc",
+    "adapter": "CachedHttpSourceStorage",
+    "shared_upload_pvc": "legal-shared-files"
   },
   "redis": {
-    "status": "optional_platform_only",
-    "does_not_implement_queue_or_worker": true
+    "status": "authenticated_celery_broker",
+    "result_store": "postgresql"
   }
 }

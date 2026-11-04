@@ -1,28 +1,23 @@
-# Desired state và ranh giới quản lý
+# Desired state giai đoạn 2
 
-Một ứng dụng backend modular monolith, một PostgreSQL local có các schema knowledge/runtime/qa/dev_meta. GitOps không diễn giải C05/C06/C07, không tự chọn luật và không tạo kết quả pháp lý. App modules và contracts vẫn thuộc repo ứng dụng.
+Một backend modular monolith được chạy bằng API và Celery worker riêng. Không tách business modules thành các microservices.
 
 ```text
-App source → build/import receipt ─┐
-                                  ├→ GitOps prepare → review/commit/push → Argo manual sync
-App importer → seed receipt ──────┘                                  ├→ platform
-                                                                    └→ backend
+Traefik → Frontend → FastAPI → Redis → Worker → PostgreSQL
+                           ↘ shared files ↗
+Beat (một replica) → Redis
+LocalStack → ESO → Secrets → API/Worker/PostgreSQL/Redis
+Prometheus ← API metrics; Alloy ← logs → Loki; Grafana ← Prometheus/Loki
 ```
 
-| Thành phần | Owner |
-|---|---|
-| k3d, kubeconfig, local namespaces, Secrets, Argo install/project/Applications | Infrastructure |
-| PostgreSQL/Redis StatefulSet, Service, PVC template | GitOps platform |
-| Backend Deployment/Service/ConfigMap/replicas/image selection | GitOps workloads |
-| Alembic schema, knowledge reader và importer workbook | Application owner operations |
-| PDF/LLM/embedding logic và contracts nghiệp vụ | Application modules |
+Infrastructure sở hữu cluster/kubeconfig, controllers, bootstrap secrets và ClusterSecretStore. GitOps sở hữu app/datastore workloads, ExternalSecret mappings, network policies, HPA/PDB và monitoring resources của backend. App sở hữu contracts, nghiệp vụ, migration/importer và cơ chế idempotency/lease.
 
-Handoff contract là `contracts/local-platform.json`, cùng bytes ở hai folder. Infrastructure nhận diện cluster instance bằng private marker; import/seed receipts gắn với instance đó. Receiver GitOps kiểm sự nhất quán trước khi đưa backend vào root. Receipts không tự kiểm tra hoặc sửa một DB đã bị người dùng thay đổi ngoài quy trình.
+Redis dùng password, AOF/PVC, không phải result store. API/worker/Beat trỏ cùng image override backend. API và worker chung PVC uploads/source-cache/report exports; RWO local-path phù hợp một node, chưa phải storage multi-node/cloud.
 
-Metadata backend `release.json` giữ image/source/knowledge/dataset hashes. Image tag local được đặt theo Docker config ID thực và import vào k3d; không thay digest registry bằng một SHA bịa. Nếu triển khai cloud về sau, bổ sung registry digest, release signing và image/runtime policy phù hợp, thay vì dùng nguyên local tags.
+Argo source là Git đã publish. Khi kiểm source chưa publish, infrastructure `phase2 apply-local` suspend auto-sync riêng hai Legal apps rồi apply desired state cục bộ. Chỉ resume sau khi review/publish đúng HEAD. Việc này không tạo commit hay CI run.
 
-PostgreSQL/Redis dùng local-path PVC, single replica, không có HA. Không copy Kafka/MinIO/MLflow hay auth system của MaintAI. Secrets dùng credentials local, không được đưa vào ConfigMap/profiles. Không có Ingress public vì app hiện chưa thực thi auth/tenant policy đầy đủ.
+`legal_gitops.release` giữ lại các resources/config đã có khi nâng image, tránh xóa worker/edge/policies. Helper dừng backend kiểu cũ từ chối phase2 vì HPA/Argo có ownership replicas riêng; dùng runbook drain trước khi scale0. Không xóa Redis/PVC khi còn job.
 
-GitOps manual sync giữ việc review nguồn tách khỏi thao tác deploy. Thay local files chưa đổi cluster, publish chưa đồng nghĩa đã sync và Argo Synced chưa chứng minh chất lượng module/E2E.
+C07/C13 vẫn draft, source chưa xác minh giữ UNKNOWN; monitoring không tự nâng cấp mức xác minh pháp lý.
 
-Future worker có thể dùng cùng app image nhưng command worker riêng. Chỉ thêm sau khi implementation đã tồn tại; Redis hiện không chứng minh queue đã hoạt động. Frontend cần handoff build/port/API riêng, không sinh image UI từ skeleton hoặc giả định tiến độ trong slide.
+ConfigMaps sinh bởi Kustomize được giữ cho rollback khi prune tắt. `generatorOptions` gắn `IgnoreExtraneous` theo cơ chế Argo dành cho generated resources; nó chỉ bỏ các bản generated dư khỏi tổng sync status, không bỏ so sánh Deployment/image hoặc bỏ kiểm tra health. Các bản cũ chỉ được gắn annotation sau khi kiểm tra không có pod đang dùng.
