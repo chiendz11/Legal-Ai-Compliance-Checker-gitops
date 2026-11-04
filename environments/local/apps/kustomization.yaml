@@ -34,3 +34,6 @@ replicas:
   count: 2
 - name: legal-frontend
   count: 2
+generatorOptions:
+  annotations:
+    argocd.argoproj.io/compare-options: IgnoreExtraneous
