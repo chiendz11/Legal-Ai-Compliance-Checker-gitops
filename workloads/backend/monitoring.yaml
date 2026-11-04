@@ -1,0 +1,52 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: legal-backend
+  labels:
+    release: legal-monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+    - legal-checker
+  selector:
+    matchLabels:
+      app: legal-backend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: legal-backend
+  labels:
+    release: legal-monitoring
+spec:
+  groups:
+  - name: legal-http
+    rules:
+    - alert: LegalBackendDown
+      expr: up{namespace="legal-checker",service="legal-backend"} == 0
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: Legal backend scrape unavailable
+    - alert: LegalBackendHighErrorRate
+      expr: sum(rate(legal_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(legal_http_requests_total[5m])),
+        0.001) > 0.05
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: Legal backend HTTP error rate exceeds 5 percent
+    - alert: LegalLlmHighErrorRate
+      expr: sum(max by(provider,status) (rate(legal_llm_calls_total{status="ERROR"}[5m])))
+        / clamp_min(sum(max by(provider,status) (rate(legal_llm_calls_total[5m]))),
+        0.001) > 0.05
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: Persisted LLM call error rate exceeds 5 percent

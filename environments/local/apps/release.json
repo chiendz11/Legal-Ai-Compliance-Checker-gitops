@@ -1,9 +1,14 @@
 {
   "schema_version": "1.0.0",
   "backend_enabled": true,
-  "worker_enabled": false,
+  "worker_enabled": true,
   "frontend_enabled": true,
   "image": "ghcr.io/chiendz11/legal-ai-compliance-checker-backend:sha-5194fddf3e87cea90d1a7fb8913a98ec6a20bd9c",
   "knowledge_snapshot_sha256": null,
-  "frontend_image": "ghcr.io/chiendz11/legal-ai-compliance-checker-frontend:sha-5194fddf3e87cea90d1a7fb8913a98ec6a20bd9c"
+  "frontend_image": "ghcr.io/chiendz11/legal-ai-compliance-checker-frontend:sha-5194fddf3e87cea90d1a7fb8913a98ec6a20bd9c",
+  "scheduler_enabled": true,
+  "phase2_enabled": true,
+  "queue": "celery",
+  "shared_file_storage": "legal-shared-files",
+  "verification_status": "SOURCE_PENDING_LOCAL_VALIDATION"
 }

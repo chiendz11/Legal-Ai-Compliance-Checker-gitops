@@ -7,8 +7,11 @@ images:
 kind: Kustomization
 namespace: legal-checker
 resources:
+- ../../../workloads/storage
 - ../../../workloads/backend
 - ../../../workloads/frontend
+- ../../../workloads/worker
+- ../../../workloads/edge
 configMapGenerator:
 - name: legal-backend-config
   literals:
@@ -19,7 +22,15 @@ configMapGenerator:
   - ASSESSMENT_LLM=openai
   - OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
   - OPENAI_MODEL=gemini-3.5-flash-lite
-  - ASSESSMENT_QUEUE=inline
   - SOURCE_DOWNLOAD_TIMEOUT_SECONDS=30
   - SOURCE_MAX_BYTES=104857600
   - PYTHONDONTWRITEBYTECODE=1
+  - ASSESSMENT_QUEUE=celery
+  - RUN_LEASE_SECONDS=600
+  - RUN_REQUEUE_AFTER_SECONDS=120
+  - RUN_RECOVERY_INTERVAL_SECONDS=60
+replicas:
+- name: legal-backend
+  count: 2
+- name: legal-frontend
+  count: 2

@@ -1,112 +1,26 @@
-# Legal AI Compliance Checker — GitOps local
+# Legal Checker — GitOps local
 
-Desired state cho cluster **k3d `legal-checker-local`**, tham khảo ranh giới Infrastructure/Argo/GitOps của MaintAI. Đây là folder source mới, chưa chạy tests/render/build/sync/deploy và chưa có GitHub remote được tạo.
+Desired state của cluster **k3d `legal-checker-local`**, namespace `legal-checker`. API và Celery worker dùng cùng backend image; scheduler Beat dùng image đó, chạy riêng một replica.
 
-## Phần được quản lý
-
-| Root | Nội dung |
+| Root/package | Sở hữu |
 |---|---|
-| `environments/local/platform` | PostgreSQL 17.10/PVC; Redis tùy chọn, ban đầu tắt |
-| `environments/local/apps` | Ban đầu rỗng; backend chỉ được thêm sau khi có image và seed receipts |
-| `platform/postgres`, `platform/redis` | Kustomize packages của datastores local |
-| `workloads/backend` | Một Deployment FastAPI + ClusterIP Service; không có Ingress public |
-| `operations/migrations` | Template Job owner operation; **không được include vào Argo roots** |
-| `config/local/runtime-catalog.json` | Trạng thái build/entrypoint đã đối chiếu với checkout app |
-| `legal_gitops/release.py` | Chuẩn bị local desired state từ receipts; không gọi cluster/Git push |
-| `contracts`, `versions` | Handoff contract, schema receipts, pins và nguồn tham khảo |
+| `environments/local/platform` | PostgreSQL/PVC, Redis/PVC, ExternalSecrets, default-deny và các NetworkPolicies cho app |
+| `environments/local/apps` | Shared PVC, backend/frontend, worker/Beat, HPA/PDB, ingress, ServiceMonitor/PrometheusRule |
+| `platform/secrets` | ESO resources; không chứa Secret payload |
+| `workloads/storage` | PVC upload/cache/export được dùng chung trên node k3d |
+| `operations/migrations` | Template Job gọi Alembic của app, ngoài auto-sync roots |
+| `legal_gitops/release.py` | Chuẩn bị file từ receipts; không tự deploy/commit/push |
 
-Infrastructure ở `../Legal-Ai-Compliance-Checker-infrastructure/` sở hữu cluster, kubeconfig, namespaces, Secrets và Argo bootstrap. Folder này không tạo các resources đó lần thứ hai. App sở hữu Dockerfile, SQL/Alembic và seed logic.
+Infrastructure bootstrap LocalStack, ESO, Traefik và monitoring trước khi apply roots giai đoạn 2. Secret names/ports/context được thống nhất ở `contracts/local-platform.json`. Không đưa API key, kubeconfig, workbook, PDF, DB hoặc receipts private vào Git.
 
-## 1. Mặc định không kích hoạt app
+## Worker + Redis
 
-`environments/local/apps/kustomization.yaml` có `resources: []`; không có Deployment backend, worker hay frontend trong root đang chọn. PostgreSQL có cấu hình nhưng cũng chưa chạy nếu chưa có cluster/Argo sync.
+`ASSESSMENT_QUEUE=celery`, Redis URL lấy từ Secret `legal-redis/REDIS_URL`. `legal-worker` không có HTTP Service. Beat giữ một replica/Recreate; không dùng `worker --beat` khi có thể tăng worker. API/worker cùng mount `/cache` trên PVC. Kết quả và tiến độ được lưu PostgreSQL để trình duyệt có thể đọc lại sau F5.
 
-Không deploy business modules thành nhiều services. Backend hiện chỉ có health/GET knowledge/GET run; worker còn placeholder, frontend checkout chưa có build interface. Metadata/speaker slides tiến độ giả định không được dùng như bằng chứng runtime.
+Root images override cùng tên backend cho API, worker và scheduler, nên release pipeline chỉ cần build backend image một lần. Frontend tiếp tục có image/Dockerfile hiện có. Không thêm Dockerfile worker.
 
-PDF giữ nguồn HTTP(S) hiện có; không tự tạo MinIO hoặc đưa workbook/PDF vào Git. Redis chỉ là broker hạ tầng dự kiến, không tự thêm Celery/task vào app.
+## Triển khai
 
-## 2. Công cụ chuẩn bị source
+[Runbook giai đoạn 2](../Legal-Ai-Compliance-Checker-infrastructure/docs/PHASE2_LOCAL.md) hướng dẫn install, build/import và apply source local. Source chưa publish được thử với Argo auto-sync tạm ngừng ở đúng hai Legal apps. Review/publish rồi kiểm remote HEAD trước khi resume. File `release.json` là desired state/provenance, không thay bằng chứng chạy thật.
 
-Từ root GitOps:
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-```
-
-Các lệnh sau chỉ viết files, không apply cluster:
-
-```bash
-.venv/bin/python -m legal_gitops.release platform
-# Chỉ khi cần broker cho implementation queue/worker về sau:
-.venv/bin/python -m legal_gitops.release platform --redis
-```
-
-Không truyền `--redis` sẽ giữ nguyên Redis đã được bật; không âm thầm loại datastore khỏi desired state. Việc retire Redis/PVC cần review vận hành riêng.
-
-Thường nên dùng CLI infrastructure để prepare backend, vì CLI đó kiểm cluster/import và tìm đúng private receipts:
-
-```bash
-# Chạy từ folder infrastructure:
-.venv/bin/python -m legal_infra prepare backend
-```
-
-Có thể gọi receiver trực tiếp với các file receipt do infrastructure tạo:
-
-```bash
-.venv/bin/python -m legal_gitops.release backend \
-  --image-receipt ../Legal-Ai-Compliance-Checker-infrastructure/.local/backend-image.json \
-  --seed-receipt ../Legal-Ai-Compliance-Checker-infrastructure/.local/seed.json
-```
-
-Receiver yêu cầu:
-
-- Image ID thật và alias local khớp, đã import vào đúng context.
-- Image và seed cùng cluster instance/image ID.
-- Source SHA/hash/dirty state, workbook hash và knowledge snapshot hash rõ ràng.
-- Seed thuộc DEV_VALIDATION, không phải MASTER/TEST answers.
-
-Receipts là bản ghi của operator local, không phải chữ ký production hoặc bằng chứng đã chạy kiểm thử. Dữ liệu public release chỉ gồm IDs/hashes/source metadata; không ghi credentials, rows workbook hoặc paths private vào Git.
-
-## 3. Thay đổi sau prepare backend
-
-Generator sửa:
-
-```text
-environments/local/apps/
-├── kustomization.yaml   # include backend, image alias thật, ConfigMap có knowledge pin
-└── release.json         # image/source/dataset metadata; không có secret
-```
-
-ConfigMap được Kustomize gắn content hash; thay snapshot/config tạo PodTemplate reference mới. DATABASE_URL chỉ lấy từ Secret `legal-database` do infrastructure tạo. Backend dùng UID không phải root, filesystem chỉ đọc, cache/tmp là emptyDir có giới hạn. Image local dùng `imagePullPolicy: Never`; phải import vào cluster trước.
-
-`/health` dùng cho startup/liveness. Readiness `/api/v1/knowledge` xác nhận app phục vụ snapshot đã nạp; endpoint này hiện không query lại DB mỗi lần, nên không phải kiểm tra DB sống liên tục. Quan sát PostgreSQL/DB errors riêng; không gọi đây là full E2E.
-
-## 4. Review, publish và Argo
-
-Folder này chưa tự khởi tạo Git/remote. Khi đã tạo repo và publish branch thật, điền URL đó vào private settings của infrastructure và gọi `attach-gitops`. Không có URL repo giả được auto-apply.
-
-Review diff trước khi commit/push. Argo có hai Applications manual sync:
-
-1. `legal-checker-platform`: sync trước để tạo DB/PVC.
-2. Chạy migration và seed qua infrastructure/app owner.
-3. Prepare/publish backend desired state.
-4. `legal-checker-backend`: sync sau, rồi kiểm đúng image/knowledge hash.
-
-Không tự auto-sync/prune. AppProject chặn child app tạo Secrets/cluster resources. Private remote cần cấp repository credentials ngoài Git.
-
-## 5. Tạm dừng backend
-
-```bash
-.venv/bin/python -m legal_gitops.release disable-backend
-```
-
-Generator giữ resources/image/pin và thêm replicas=0. Review/publish và sync để pod thực sự dừng. Tránh chỉ xóa Deployment khỏi root khi Argo prune đang tắt, vì pod cũ sẽ vẫn chạy. PostgreSQL/PVC không bị thay đổi.
-
-## 6. Kiểm tra được thực hiện về sau
-
-Khi được yêu cầu kiểm chứng, render hai roots bằng `make render-platform` và `make render-apps`, rồi kiểm receipts/context, migrations, dataset hashes, image startup và API. Đợt tạo source này chưa thực hiện các bước đó.
-
-Job migration phải luôn ở ngoài Argo roots. Không thêm seed tự động vào startup pod; không dùng datasets/reference để giả output nghiệp vụ. Thay schema trong repo app bằng Alembic revision mới. Worker/frontend chỉ bổ sung khi có Dockerfile/entrypoint, cấu hình, dependencies và probe thật.
-
-Xem [kiến trúc](docs/ARCHITECTURE.md), [trình tự local](docs/LOCAL_DEVELOPMENT.md) và [infrastructure runbook](../Legal-Ai-Compliance-Checker-infrastructure/README.md).
+Các replica API/frontend do HPA quản lý (2–4, CPU70%); Argo cần ignore `/spec/replicas` + RespectIgnoreDifferences. Worker một replica/concurrency1; PVC RWO chỉ chia sẻ được trên cùng node. Default-deny cho phép đúng DNS, DB, Redis, edge, scrape và public HTTPS. Đây là local development, không chứng minh HA, E2E provider thật hoặc kết quả pháp lý đã được con người duyệt.

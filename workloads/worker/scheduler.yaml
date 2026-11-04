@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legal-scheduler
+  annotations:
+    argocd.argoproj.io/sync-wave: '5'
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: legal-scheduler
+  template:
+    metadata:
+      labels:
+        app: legal-scheduler
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: scheduler
+        image: ghcr.io/chiendz11/legal-ai-compliance-checker-backend:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        envFrom:
+        - configMapRef:
+            name: legal-backend-config
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: legal-database
+              key: DATABASE_URL
+        - name: GROQ_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: legal-llm-secret
+              key: GROQ_API_KEY
+              optional: true
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: legal-llm-secret
+              key: OPENAI_API_KEY
+              optional: true
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: legal-redis
+              key: REDIS_URL
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        volumeMounts:
+        - name: cache
+          mountPath: /cache
+        - name: tmp
+          mountPath: /tmp
+        command:
+        - celery
+        - -A
+        - legal_checker.worker.celery_app:app
+        - beat
+        - --loglevel=INFO
+        - --schedule=/tmp/celerybeat-schedule
+        - --pidfile=/tmp/beat.pid
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -ec
+            - test -s /tmp/beat.pid && kill -0 "$(cat /tmp/beat.pid)"
+          periodSeconds: 15
+      volumes:
+      - name: cache
+        persistentVolumeClaim:
+          claimName: legal-shared-files
+      - name: tmp
+        emptyDir:
+          sizeLimit: 128Mi
+      terminationGracePeriodSeconds: 300
+  strategy:
+    type: Recreate

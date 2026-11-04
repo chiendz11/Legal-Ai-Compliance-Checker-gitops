@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: legal-checker
+spec:
+  ingressClassName: legal-local
+  rules:
+    - host: app.legal-checker.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: legal-frontend, port: {number: 80}}
+    - host: api.legal-checker.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: legal-backend, port: {number: 8000}}
