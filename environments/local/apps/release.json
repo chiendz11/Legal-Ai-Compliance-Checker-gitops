@@ -3,7 +3,7 @@
   "backend_enabled": true,
   "worker_enabled": false,
   "frontend_enabled": true,
-  "image": "ghcr.io/chiendz11/legal-ai-compliance-checker-backend:sha-34a5e06cb626b72805b8e1cef887cdd8eb4a6c31",
+  "image": "ghcr.io/chiendz11/legal-ai-compliance-checker-backend:sha-392618259f800f99aa55a02577f8ff8260002223",
   "knowledge_snapshot_sha256": null,
-  "frontend_image": "ghcr.io/chiendz11/legal-ai-compliance-checker-frontend:sha-34a5e06cb626b72805b8e1cef887cdd8eb4a6c31"
+  "frontend_image": "ghcr.io/chiendz11/legal-ai-compliance-checker-frontend:sha-392618259f800f99aa55a02577f8ff8260002223"
 }
